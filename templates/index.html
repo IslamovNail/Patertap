@@ -29,48 +29,7 @@ function toast(msg){let n=document.createElement('div');n.className='notice';n.t
 function closeModal(){$('modal').classList.remove('open')}
 function showModal(title,html){$('modalTitle').textContent=title;$('modalContent').innerHTML=html;$('modal').classList.add('open')}
 function openAuth(){showModal('Вход или регистрация',`<p class="muted">Используется настоящая серверная авторизация. Пароль хранится только в виде хеша.</p><form class="form" id="authForm"><label>Email<input type="email" name="email" required maxlength="254" autocomplete="email"></label><label>Пароль<input type="password" name="password" required minlength="10" maxlength="128" autocomplete="current-password"></label><label>Имя (только для регистрации)<input name="name" maxlength="80" placeholder="Как к вам обращаться"></label><label>Дата рождения (для регистрации)<input name="birth_date" type="date"></label><button class="btn green">Войти</button><button class="btn light" type="button" onclick="registerInstead()">Создать аккаунт</button></form><div id="authError" class="notice error hidden"></div><p class="smalltext">Минимальный возраст в этом MVP — 17 лет. Перед публичным запуском правила необходимо проверить с юристом.</p>`);$('authForm').onsubmit=async e=>{e.preventDefault();let f=new FormData(e.target);try{let d=await api('/auth/login',{method:'POST',body:JSON.stringify({email:f.get('email'),password:f.get('password')})});token=d.token;me=d.user;localStorage.setItem('pt_token',token);closeModal();await refreshAll()}catch(err){$('authError').textContent=err.message;$('authError').classList.remove('hidden')}}}
-function registerInstead() {
-  const form = $('authForm');
-  const submit = form.querySelector('button[type="submit"]');
-  const switchBtn = form.querySelector('button[type="button"]');
-
-  $('modalTitle').textContent = 'Создать аккаунт';
-  submit.textContent = 'Зарегистрироваться';
-  switchBtn.textContent = 'Уже есть аккаунт? Войти';
-  switchBtn.onclick = openAuth;
-
-  form.onsubmit = async function(e) {
-    e.preventDefault();
-
-    const data = new FormData(form);
-    const errorBox = $('authError');
-    errorBox.classList.add('hidden');
-
-    try {
-      const result = await api('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify({
-          email: data.get('email'),
-          password: data.get('password'),
-          name: data.get('name'),
-          birth_date: data.get('birth_date')
-        })
-      });
-
-      token = result.token;
-      me = result.user;
-
-      localStorage.setItem('pt_token', token);
-
-      closeModal();
-      await refreshAll();
-      toast('Аккаунт создан');
-    } catch (error) {
-      errorBox.textContent = error.message;
-      errorBox.classList.remove('hidden');
-    }
-  };
-}
+function registerInstead(){let f=$('authForm');f.onsubmit=async e=>{e.preventDefault();let d=new FormData(e.target);try{let res=await api('/auth/register',{method:'POST',body:JSON.stringify({email:d.get('email'),password:d.get('password'),name:d.get('name'),birth_date:d.get('birth_date')})});token=res.token;me=res.user;localStorage.setItem('pt_token',token);closeModal();await refreshAll()}catch(err){$('authError').textContent=err.message;$('authError').classList.remove('hidden')}};$('modalTitle').textContent='Создать аккаунт';}
 function openListing(){if(!me)return openAuth();showModal('Новое объявление',`<form id="listingForm" class="form"><label>Заголовок<input name="title" required maxlength="120"></label><label>Описание<textarea name="description" required maxlength="3000" rows="3"></textarea></label><label>Район<select name="district" required><option>Алмалинский</option><option>Бостандыкский</option><option>Ауэзовский</option><option>Медеуский</option><option>Наурызбайский</option><option>Турксибский</option><option>Жетысуский</option><option>Алатауский</option></select></label><label>Цена за месяц, ₸<input name="price" type="number" min="1000" max="5000000" required></label><label>Тип жилья<select name="type"><option>Комната</option><option>Квартира</option><option>Подселение</option><option>Студия</option></select></label><label>Доступно с<input name="available_from" type="date" required></label><label>Условия и удобства<input name="amenities" maxlength="400" placeholder="Wi-Fi, мебель, коммунальные отдельно"></label><button class="btn green">Опубликовать</button></form>`);$('listingForm').onsubmit=async e=>{e.preventDefault();let f=new FormData(e.target),d=Object.fromEntries(f);d.price=Number(d.price);try{await api('/listings',{method:'POST',body:JSON.stringify(d)});closeModal();await loadListings();toast('Объявление опубликовано')}catch(err){toast(err.message)}}}
 function openProfile(){if(!me)return openAuth();showModal('Профиль и предпочтения',`<form id="profileForm" class="form"><label>Имя<input name="name" maxlength="80" value="${esc(me.name||'')}" required></label><label>Город<input name="city" maxlength="80" value="${esc(me.city||'Алматы')}"></label><label>Статус<select name="status"><option>Студент</option><option>Работаю</option><option>Другое</option></select></label><label>Месячный бюджет, ₸<input name="budget" type="number" min="0" max="5000000" value="${me.budget||''}"></label><label>Режим сна<select name="sleep"><option value="">Не указано</option><option>Рано ложусь</option><option>Поздно ложусь</option><option>Гибкий</option></select></label><label>Чистота<select name="cleanliness"><option value="">Не указано</option><option>Очень важно</option><option>Умеренно</option><option>Не принципиально</option></select></label><label>Гости<select name="guests"><option value="">Не указано</option><option>Часто</option><option>Иногда</option><option>Редко</option></select></label><label>Курение<select name="smoking"><option value="">Не указано</option><option>Не курю</option><option>Курю</option><option>Не против соседей, которые курят</option></select></label><label>Шум<select name="noise"><option value="">Не указано</option><option>Тишина</option><option>Умеренно</option><option>Не мешает шум</option></select></label><label>Личное пространство<select name="privacy"><option value="">Не указано</option><option>Много пространства</option><option>Баланс</option><option>Люблю общаться</option></select></label><button class="btn green">Сохранить профиль</button></form>`);$('profileForm').onsubmit=async e=>{e.preventDefault();let d=Object.fromEntries(new FormData(e.target));d.budget=d.budget?Number(d.budget):null;try{let res=await api('/profile',{method:'PUT',body:JSON.stringify(d)});me=res.user;closeModal();await refreshAll();toast('Профиль сохранён')}catch(err){toast(err.message)}}}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
